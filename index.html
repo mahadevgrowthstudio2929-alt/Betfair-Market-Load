@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#090909" />
+  <title>Betfair Market Load | Cricket Market Intelligence</title>
+
+  <!-- Premium fallback-friendly font stack -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;0,900;1,600;1,700;1,800;1,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#070707;
+      --bg2:#10100f;
+      --panel:rgba(23,23,21,.72);
+      --gold:#d8aa3c;
+      --gold-light:#ffe19a;
+      --gold-dark:#8e671d;
+      --text:#f7f2e7;
+      --muted:#aaa397;
+      --line:rgba(216,170,60,.22);
+      --safe-top:env(safe-area-inset-top, 0px);
+      --safe-bottom:env(safe-area-inset-bottom, 0px);
+    }
+
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    html,body{
+      width:100%;
+      min-height:100%;
+      overflow-x:hidden;
+      background:var(--bg);
+    }
+
+    body{
+      font-family:"Inter",Arial,sans-serif;
+      color:var(--text);
+    }
+
+    a{
+      text-decoration:none;
+      color:inherit;
+    }
+
+    .app{
+      width:100%;
+      min-height:100svh;
+      position:relative;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      isolation:isolate;
+      padding:
+        calc(var(--safe-top) + 14px)
+        18px
+        calc(var(--safe-bottom) + 16px);
+      background:
+        radial-gradient(circle at 50% 0%, rgba(191,138,35,.13), transparent 31%),
+        radial-gradient(circle at 10% 90%, rgba(150,101,17,.08), transparent 30%),
+        linear-gradient(145deg,#050505 0%,#0d0d0c 48%,#060606 100%);
+    }
+
+    /* Dynamic terminal grid */
+    .grid{
+      position:absolute;
+      inset:0;
+      z-index:-4;
+      opacity:.28;
+      background-image:
+        linear-gradient(rgba(216,170,60,.055) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(216,170,60,.055) 1px,transparent 1px);
+      background-size:28px 28px;
+      mask-image:linear-gradient(to bottom,black,transparent 95%);
+      animation:gridMove 12s linear infinite;
+    }
+
+    @keyframes gridMove{
+      from{background-position:0 0}
+      to{background-position:0 28px}
+    }
+
+    /* Motorsport-inspired speed trails */
+    .trail{
+      position:absolute;
+      height:1px;
+      width:80%;
+      left:-30%;
+      background:linear-gradient(90deg,transparent,rgba(216,170,60,.04),rgba(255,224,154,.7),rgba(216,170,60,.08),transparent);
+      filter:blur(.2px);
+      transform:rotate(-18deg);
+      z-index:-2;
+      animation:trail 6s linear infinite;
+    }
+
+    .trail.t1{top:17%;animation-delay:-1s}
+    .trail.t2{top:43%;animation-delay:-3.2s;width:65%;opacity:.45}
+    .trail.t3{top:76%;animation-delay:-5s;width:95%;opacity:.3}
+
+    @keyframes trail{
+      0%{transform:translateX(-40%) rotate(-18deg);opacity:0}
+      15%{opacity:.8}
+      70%{opacity:.45}
+      100%{transform:translateX(190%) rotate(-18deg);opacity:0}
+    }
+
+    /* Background scanner */
+    .scanner{
+      position:absolute;
+      left:0;
+      width:100%;
+      height:2px;
+      background:linear-gradient(90deg,transparent,rgba(255,221,142,.8),transparent);
+      box-shadow:0 0 18px rgba(216,170,60,.32);
+      z-index:-1;
+      opacity:.32;
+      animation:scan 7s ease-in-out infinite;
+    }
+
+    @keyframes scan{
+      0%,100%{top:18%;opacity:0}
+      15%,80%{opacity:.35}
+      50%{top:87%;opacity:.6}
+    }
+
+    .shell{
+      width:min(100%,430px);
+      margin:auto;
+      position:relative;
+    }
+
+    /* Top terminal status */
+    .topline{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:12px;
+      padding:0 4px;
+      font-family:"Barlow Condensed",sans-serif;
+      letter-spacing:1.5px;
+      font-size:10px;
+      color:#847d70;
+      text-transform:uppercase;
+      animation:fadeUp .7s ease both;
+    }
+
+    .live{
+      display:flex;
+      align-items:center;
+      gap:7px;
+      color:#d7c8a9;
+    }
+
+    .dot{
+      width:7px;
+      height:7px;
+      border-radius:50%;
+      background:var(--gold);
+      box-shadow:0 0 0 0 rgba(216,170,60,.6);
+      animation:pulse 1.8s infinite;
+    }
+
+    @keyframes pulse{
+      70%{box-shadow:0 0 0 8px rgba(216,170,60,0)}
+      100%{box-shadow:0 0 0 0 rgba(216,170,60,0)}
+    }
+
+    #clock{
+      font-variant-numeric:tabular-nums;
+      color:#918877;
+    }
+
+    /* Main glass terminal */
+    .terminal{
+      position:relative;
+      border:1px solid var(--line);
+      background:
+        linear-gradient(140deg,rgba(255,255,255,.045),transparent 22%),
+        linear-gradient(160deg,rgba(255,224,154,.025),rgba(0,0,0,.28)),
+        var(--panel);
+      border-radius:28px;
+      padding:18px 17px 15px;
+      box-shadow:
+        0 22px 60px rgba(0,0,0,.5),
+        inset 0 1px 0 rgba(255,255,255,.045);
+      backdrop-filter:blur(18px);
+      -webkit-backdrop-filter:blur(18px);
+      animation:terminalIn .8s cubic-bezier(.2,.8,.2,1) both;
+    }
+
+    @keyframes terminalIn{
+      from{opacity:0;transform:translateY(22px) scale(.97)}
+      to{opacity:1;transform:translateY(0) scale(1)}
+    }
+
+    .terminal:before,
+    .terminal:after{
+      content:"";
+      position:absolute;
+      pointer-events:none;
+    }
+
+    .terminal:before{
+      width:58px;
+      height:58px;
+      right:-1px;
+      top:-1px;
+      border-top:1px solid rgba(255,225,154,.65);
+      border-right:1px solid rgba(255,225,154,.65);
+      border-radius:0 28px 0 0;
+      opacity:.8;
+    }
+
+    .terminal:after{
+      left:12%;
+      right:12%;
+      top:0;
+      height:1px;
+      background:linear-gradient(90deg,transparent,var(--gold),transparent);
+      opacity:.65;
+      animation:edgeSweep 4s ease-in-out infinite;
+    }
+
+    @keyframes edgeSweep{
+      0%,100%{transform:scaleX(.25);opacity:.2}
+      50%{transform:scaleX(1);opacity:.85}
+    }
+
+    /* Logo */
+    .brand{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+      position:relative;
+    }
+
+    .logo-orbit{
+      width:84px;
+      height:84px;
+      border-radius:50%;
+      padding:3px;
+      display:grid;
+      place-items:center;
+      position:relative;
+      margin-bottom:9px;
+      background:conic-gradient(
+        from 0deg,
+        transparent 0 22%,
+        rgba(255,225,154,.9) 27%,
+        rgba(216,170,60,.25) 34%,
+        transparent 43% 68%,
+        rgba(216,170,60,.7) 76%,
+        transparent 84%
+      );
+      animation:spin 9s linear infinite;
+    }
+
+    .logo-orbit:before{
+      content:"";
+      position:absolute;
+      inset:6px;
+      border-radius:50%;
+      border:1px solid rgba(216,170,60,.23);
+    }
+
+    .logo-wrap{
+      width:72px;
+      height:72px;
+      border-radius:50%;
+      background:#0c0c0b;
+      overflow:hidden;
+      position:relative;
+      z-index:2;
+      display:grid;
+      place-items:center;
+      border:1px solid rgba(255,222,145,.38);
+      box-shadow:
+        0 0 25px rgba(216,170,60,.18),
+        inset 0 0 18px rgba(216,170,60,.08);
+      animation:logoFloat 4s ease-in-out infinite;
+    }
+
+    .logo-wrap:after{
+      content:"";
+      position:absolute;
+      top:-100%;
+      left:-50%;
+      width:50%;
+      height:300%;
+      transform:rotate(25deg);
+      background:linear-gradient(90deg,transparent,rgba(255,240,193,.65),transparent);
+      animation:logoSweep 5s ease-in-out infinite;
+    }
+
+    .logo-wrap img{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      padding:6px;
+      position:relative;
+      z-index:1;
+    }
+
+    @keyframes spin{
+      to{transform:rotate(360deg)}
+    }
+
+    @keyframes logoFloat{
+      0%,100%{transform:translateY(0)}
+      50%{transform:translateY(-4px)}
+    }
+
+    @keyframes logoSweep{
+      0%,55%{left:-90%;opacity:0}
+      65%{opacity:1}
+      85%,100%{left:150%;opacity:0}
+    }
+
+    .eyebrow{
+      font-family:"Barlow Condensed",sans-serif;
+      font-size:11px;
+      letter-spacing:3px;
+      color:var(--gold);
+      font-weight:700;
+      text-transform:uppercase;
+      margin-bottom:3px;
+    }
+
+    h1{
+      font-family:"Barlow Condensed",Impact,sans-serif;
+      font-size:clamp(42px,12vw,54px);
+      line-height:.88;
+      font-style:italic;
+      text-transform:uppercase;
+      letter-spacing:-.8px;
+      font-weight:900;
+      background:linear-gradient(105deg,#fff8e8 0%,#d8aa3c 48%,#fff2c7 100%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      text-shadow:0 8px 28px rgba(216,170,60,.08);
+    }
+
+    .sub{
+      margin:10px auto 0;
+      max-width:320px;
+      color:#aaa397;
+      font-size:12px;
+      line-height:1.55;
+    }
+
+    .sub b{
+      color:#e7d5ae;
+      font-weight:600;
+    }
+
+    /* Market signal strip */
+    .signal-strip{
+      margin-top:15px;
+      border-top:1px solid rgba(216,170,60,.14);
+      border-bottom:1px solid rgba(216,170,60,.14);
+      height:31px;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      position:relative;
+    }
+
+    .signal-track{
+      display:flex;
+      align-items:center;
+      gap:20px;
+      width:max-content;
+      white-space:nowrap;
+      animation:ticker 18s linear infinite;
+      font-family:"Barlow Condensed",sans-serif;
+      font-weight:700;
+      letter-spacing:1px;
+      font-size:10px;
+      color:#a9a091;
+    }
+
+    .signal-track span{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .signal-track i{
+      width:4px;
+      height:4px;
+      border-radius:50%;
+      background:var(--gold);
+      display:inline-block;
+    }
+
+    @keyframes ticker{
+      to{transform:translateX(-35%)}
+    }
+
+    /* KPI interface */
+    .metrics{
+      margin-top:15px;
+      display:grid;
+      grid-template-columns:1.1fr .9fr .9fr;
+      gap:8px;
+    }
+
+    .metric{
+      min-height:82px;
+      border:1px solid rgba(216,170,60,.13);
+      border-radius:16px;
+      background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.008));
+      padding:10px 9px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .metric:after{
+      content:"";
+      position:absolute;
+      width:70px;
+      height:1px;
+      background:linear-gradient(90deg,transparent,var(--gold),transparent);
+      left:-70px;
+      top:0;
+      animation:metricSweep 4s linear infinite;
+    }
+
+    .metric:nth-child(2):after{animation-delay:-1.3s}
+    .metric:nth-child(3):after{animation-delay:-2.5s}
+
+    @keyframes metricSweep{
+      to{left:120%}
+    }
+
+    .metric-label{
+      color:#847d71;
+      text-transform:uppercase;
+      font-family:"Barlow Condensed",sans-serif;
+      font-weight:700;
+      font-size:9px;
+      letter-spacing:1.1px;
+    }
+
+    .metric-value{
+      margin-top:7px;
+      color:#f5e8ca;
+      font-family:"Barlow Condensed",sans-serif;
+      font-size:24px;
+      line-height:1;
+      font-style:italic;
+      font-weight:800;
+    }
+
+    .metric small{
+      display:block;
+      margin-top:4px;
+      font-size:8px;
+      color:#777065;
+    }
+
+    /* Custom momentum visualization */
+    .bars{
+      display:flex;
+      align-items:flex-end;
+      gap:3px;
+      height:24px;
+      margin-top:6px;
+    }
+
+    .bars span{
+      width:4px;
+      border-radius:5px 5px 1px 1px;
+      background:linear-gradient(to top,var(--gold-dark),var(--gold-light));
+      animation:barPulse 1.8s ease-in-out infinite alternate;
+      box-shadow:0 0 8px rgba(216,170,60,.2);
+    }
+
+    .bars span:nth-child(1){height:8px;animation-delay:-.2s}
+    .bars span:nth-child(2){height:16px;animation-delay:-.8s}
+    .bars span:nth-child(3){height:11px;animation-delay:-.4s}
+    .bars span:nth-child(4){height:21px;animation-delay:-1.2s}
+    .bars span:nth-child(5){height:15px;animation-delay:-.6s}
+    .bars span:nth-child(6){height:24px;animation-delay:-1.5s}
+
+    @keyframes barPulse{
+      to{transform:scaleY(.55);opacity:.55}
+    }
+
+    .ring{
+      width:35px;
+      height:35px;
+      margin-top:6px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:conic-gradient(var(--gold) 0 72%,rgba(216,170,60,.12) 72% 100%);
+      animation:ringSpin 7s linear infinite;
+    }
+
+    .ring:before{
+      content:"";
+      width:27px;
+      height:27px;
+      border-radius:50%;
+      background:#171614;
+      border:1px solid rgba(255,255,255,.035);
+    }
+
+    @keyframes ringSpin{
+      to{transform:rotate(360deg)}
+    }
+
+    /* CTA */
+    .cta-zone{
+      margin-top:16px;
+    }
+
+    .cta{
+      width:100%;
+      min-height:58px;
+      border-radius:17px;
+      position:relative;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:11px;
+      color:#16120a;
+      background:
+        linear-gradient(105deg,#9a6b17 0%,#e5b64a 23%,#fff0b7 49%,#d49d2e 72%,#8d6116 100%);
+      background-size:220% 100%;
+      box-shadow:
+        0 10px 30px rgba(166,113,18,.2),
+        inset 0 1px 0 rgba(255,255,255,.75),
+        inset 0 -2px 0 rgba(80,49,4,.18);
+      font-family:"Barlow Condensed",sans-serif;
+      font-size:19px;
+      font-style:italic;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      animation:ctaShine 5s ease-in-out infinite;
+      transition:transform .2s ease,box-shadow .2s ease;
+    }
+
+    .cta:before{
+      content:"";
+      position:absolute;
+      top:0;
+      bottom:0;
+      width:45%;
+      left:-70%;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent);
+      transform:skewX(-22deg);
+      animation:buttonSweep 4.5s ease-in-out infinite;
+    }
+
+    .cta span,
+    .cta .arrow{
+      position:relative;
+      z-index:2;
+    }
+
+    .arrow{
+      width:25px;
+      height:25px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:rgba(22,18,10,.13);
+      font-size:17px;
+      transition:transform .25s ease;
+    }
+
+    .cta:active{
+      transform:scale(.98);
+      box-shadow:0 4px 16px rgba(166,113,18,.18);
+    }
+
+    .cta:active .arrow{
+      transform:translateX(3px);
+    }
+
+    @keyframes ctaShine{
+      0%,100%{background-position:0% 50%}
+      50%{background-position:100% 50%}
+    }
+
+    @keyframes buttonSweep{
+      0%,60%{left:-70%}
+      82%,100%{left:140%}
+    }
+
+    .agency{
+      margin-top:10px;
+      text-align:center;
+      color:#7e7461;
+      font-size:9px;
+      letter-spacing:.6px;
+      text-shadow:0 0 15px rgba(216,170,60,.18);
+    }
+
+    .agency strong{
+      color:#b8995a;
+      font-weight:600;
+    }
+
+    /* Bottom technical readout */
+    .readout{
+      margin-top:13px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:0 4px;
+      color:#625d53;
+      font-family:"Barlow Condensed",sans-serif;
+      text-transform:uppercase;
+      font-size:8px;
+      letter-spacing:1.2px;
+    }
+
+    .readout .active{
+      color:#a88746;
+    }
+
+    @keyframes fadeUp{
+      from{opacity:0;transform:translateY(8px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+
+    @media (min-width:700px){
+      .app{
+        padding:25px;
+      }
+
+      .shell{
+        transform:scale(1.02);
+      }
+    }
+
+    @media (max-height:700px){
+      .app{
+        justify-content:flex-start;
+        padding-top:12px;
+      }
+
+      .terminal{
+        padding-top:14px;
+        padding-bottom:12px;
+      }
+
+      .logo-orbit{
+        width:72px;
+        height:72px;
+        margin-bottom:6px;
+      }
+
+      .logo-wrap{
+        width:62px;
+        height:62px;
+      }
+
+      h1{
+        font-size:40px;
+      }
+
+      .sub{
+        margin-top:7px;
+      }
+
+      .signal-strip{
+        margin-top:10px;
+      }
+
+      .metrics{
+        margin-top:10px;
+      }
+
+      .metric{
+        min-height:72px;
+      }
+
+      .cta-zone{
+        margin-top:11px;
+      }
+    }
+
+    @media (prefers-reduced-motion:reduce){
+      *,
+      *:before,
+      *:after{
+        animation-duration:.01ms !important;
+        animation-iteration-count:1 !important;
+        scroll-behavior:auto !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="app">
+
+    <div class="grid"></div>
+    <div class="scanner"></div>
+
+    <div class="trail t1"></div>
+    <div class="trail t2"></div>
+    <div class="trail t3"></div>
+
+    <div class="shell">
+
+      <!-- LIVE TERMINAL STATUS -->
+      <div class="topline">
+        <div class="live">
+          <span class="dot"></span>
+          <span>Live Market Tracking</span>
+        </div>
+
+        <div id="clock">--:--:--</div>
+      </div>
+
+      <!-- MAIN PREMIUM TERMINAL -->
+      <section class="terminal">
+
+        <div class="brand">
+
+          <div class="logo-orbit">
+            <div class="logo-wrap">
+              <img
+                src="logo.png"
+                alt="Betfair Market Load Logo"
+                onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=&quot;color:#d8aa3c;font-family:Barlow Condensed,sans-serif;font-weight:900;font-style:italic;font-size:18px&quot;>BML</span>';"
+              >
+            </div>
+          </div>
+
+          <div class="eyebrow">Cricket Intelligence Terminal</div>
+
+          <h1>Betfair<br>Market Load</h1>
+
+          <p class="sub">
+            Track <b>market load</b>, side momentum and evolving activity
+            through a focused cricket market-analysis community.
+          </p>
+
+        </div>
+
+        <!-- MOVING ANALYTICS TICKER -->
+        <div class="signal-strip">
+          <div class="signal-track">
+            <span><i></i> LOAD TRACKING</span>
+            <span><i></i> SIDE MOMENTUM</span>
+            <span><i></i> MARKET ACTIVITY</span>
+            <span><i></i> SIGNAL OBSERVATION</span>
+            <span><i></i> LIVE ANALYSIS</span>
+            <span><i></i> MATCH COVERAGE</span>
+            <span><i></i> LOAD TRACKING</span>
+            <span><i></i> SIDE MOMENTUM</span>
+            <span><i></i> MARKET ACTIVITY</span>
+          </div>
+        </div>
+
+        <!-- PREMIUM ANALYTICAL INTERFACE -->
+        <div class="metrics">
+
+          <div class="metric">
+            <div class="metric-label">Market Activity</div>
+            <div class="metric-value" id="activity">ACTIVE</div>
+            <div class="bars">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+
+          <div class="metric">
+            <div class="metric-label">Live Tracking</div>
+            <div class="ring"></div>
+            <small>SESSION ON</small>
+          </div>
+
+          <div class="metric">
+            <div class="metric-label">Signal Clarity</div>
+            <div class="metric-value" id="clarity">HIGH</div>
+            <small>ANALYSIS MODE</small>
+          </div>
+
+        </div>
+
+        <!-- UNIQUE CTA -->
+        <div class="cta-zone">
+          <a
+            class="cta"
+            href="https://t.me/+7e7KPMr82pI5M2U1"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Access the live market terminal on Telegram"
+          >
+            <span>Enter The Load Desk</span>
+            <span class="arrow">→</span>
+          </a>
+
+          <div class="agency">
+            Ads managed by <strong>Mahadev Growth Studio</strong>
+          </div>
+        </div>
+
+      </section>
+
+      <div class="readout">
+        <span>System // BML-01</span>
+        <span class="active">● Analysis Feed Ready</span>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    /* Live local clock */
+    function updateClock() {
+      const clock = document.getElementById("clock");
+
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const seconds = String(now.getSeconds()).padStart(2, "0");
+
+      clock.textContent = `${hours}:${minutes}:${seconds}`;
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+
+
+    /* Subtle live interface state changes */
+    const clarity = document.getElementById("clarity");
+    const activity = document.getElementById("activity");
+
+    const clarityStates = ["HIGH", "CLEAR", "FOCUSED"];
+    const activityStates = ["ACTIVE", "TRACKING", "LIVE"];
+
+    let clarityIndex = 0;
+    let activityIndex = 0;
+
+    setInterval(() => {
+      clarityIndex = (clarityIndex + 1) % clarityStates.length;
+      clarity.style.opacity = "0";
+
+      setTimeout(() => {
+        clarity.textContent = clarityStates[clarityIndex];
+        clarity.style.opacity = "1";
+      }, 180);
+    }, 5000);
+
+    setInterval(() => {
+      activityIndex = (activityIndex + 1) % activityStates.length;
+      activity.style.opacity = "0";
+
+      setTimeout(() => {
+        activity.textContent = activityStates[activityIndex];
+        activity.style.opacity = "1";
+      }, 180);
+    }, 4200);
+
+
+    /* Premium magnetic CTA effect for pointer devices */
+    const cta = document.querySelector(".cta");
+
+    if (window.matchMedia("(hover:hover)").matches) {
+      cta.addEventListener("mousemove", (event) => {
+        const rect = cta.getBoundingClientRect();
+
+        const x = event.clientX - rect.left - rect.width / 2;
+        const y = event.clientY - rect.top - rect.height / 2;
+
+        cta.style.transform = `translate(${x * 0.03}px, ${y * 0.05}px)`;
+      });
+
+      cta.addEventListener("mouseleave", () => {
+        cta.style.transform = "translate(0,0)";
+      });
+    }
+  </script>
+
+</body>
+</html>
